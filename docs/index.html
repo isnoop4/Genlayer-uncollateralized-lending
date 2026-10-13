@@ -258,10 +258,11 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
       <section class="panel" aria-labelledby="acct-h">
         <h2 id="acct-h">Your account</h2>
         <p class="hint">A test account is created in this browser the first time you open the page. It only works on Studionet.</p>
-        <p class="who"><strong>Address</strong><br><span id="acctAddr">…</span></p>
+        <p class="who"><strong id="acctNum">Address</strong><br><span id="acctAddr">…</span></p>
         <div class="btns">
           <button class="btn ghost small" id="copyAddr" type="button">Copy address</button>
           <button class="btn ghost small" id="newAcct" type="button">New account</button>
+          <button class="btn ghost small" id="switchAcct" type="button">Switch account</button>
           <button class="btn ghost small" id="importKey" type="button">Import key</button>
         </div>
         <p class="hint" style="margin-top:12px">Use a different account for the lender than for the borrower. Owner-only actions need the account that deployed the contract.</p>
@@ -362,15 +363,37 @@ const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 let account;
 let client;
 
+const KEYS_STORE = "ucl_demo_keys";
+const ACTIVE_STORE = "ucl_demo_active";
+
+function readKeys() {
+  try {
+    const k = JSON.parse(localStorage.getItem(KEYS_STORE) || "[]");
+    return Array.isArray(k) ? k : [];
+  } catch { return []; }
+}
+function activeIndex(count) {
+  const n = Number(localStorage.getItem(ACTIVE_STORE) || 0);
+  return n >= 0 && n < count ? n : 0;
+}
+function addKey(pk) {
+  const keys = readKeys();
+  keys.push(pk);
+  localStorage.setItem(KEYS_STORE, JSON.stringify(keys));
+  localStorage.setItem(ACTIVE_STORE, String(keys.length - 1));
+}
+
 function loadAccount() {
-  let pk = localStorage.getItem(KEY_STORE);
-  if (!pk) {
-    pk = generatePrivateKey();
-    localStorage.setItem(KEY_STORE, pk);
+  let keys = readKeys();
+  if (!keys.length) {
+    keys = [localStorage.getItem(KEY_STORE) || generatePrivateKey()];
+    localStorage.setItem(KEYS_STORE, JSON.stringify(keys));
   }
-  account = createAccount(pk);
+  const active = activeIndex(keys.length);
+  account = createAccount(keys[active]);
   client = createClient({ chain: studionet, account });
   $("acctAddr").textContent = account.address;
+  $("acctNum").textContent = "Account " + (active + 1) + " of " + keys.length;
 }
 
 /* ---------- status + log ---------- */
@@ -615,10 +638,18 @@ $("copyAddr").onclick = async () => {
   catch { say("Copy failed. Select the address and copy it manually.", "err"); }
 };
 $("newAcct").onclick = () => {
-  if (!confirm("Create a new test account? The current one stays only if you saved its key elsewhere.")) return;
-  localStorage.removeItem(KEY_STORE);
+  addKey(generatePrivateKey());
   loadAccount();
-  say("New test account created.", "ok");
+  say("New test account created and selected. Use Switch account to go back to the previous one.", "ok");
+  refresh();
+};
+$("switchAcct").onclick = () => {
+  const keys = readKeys();
+  if (keys.length < 2) return say("You only have one account. Create a second one with New account.", "err");
+  const next = (activeIndex(keys.length) + 1) % keys.length;
+  localStorage.setItem(ACTIVE_STORE, String(next));
+  loadAccount();
+  say("Switched to account " + (next + 1) + " of " + keys.length + ".", "ok");
   refresh();
 };
 $("importKey").onclick = () => {
@@ -627,9 +658,9 @@ $("importKey").onclick = () => {
   try {
     const trimmed = pk.trim();
     createAccount(trimmed);
-    localStorage.setItem(KEY_STORE, trimmed);
+    addKey(trimmed);
     loadAccount();
-    say("Account imported.", "ok");
+    say("Account imported and selected.", "ok");
     refresh();
   } catch {
     say("That key is not valid. It should start with 0x and have 64 hex characters.", "err");
