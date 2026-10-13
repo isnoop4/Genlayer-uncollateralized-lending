@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Undercollateralized Lending on GenLayer</title>
+<meta name="description" content="Request, review, fund and repay reputation-based loans on a GenLayer Intelligent Contract (Studionet prototype).">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #eef2f4;
+  --card: #ffffff;
+  --ink: #14263b;
+  --ink-soft: #55677a;
+  --line: #cfd9e0;
+  --accent: #1f6f8b;
+  --accent-ink: #ffffff;
+  --ok: #1f7a5c;
+  --warn: #a8690f;
+  --bad: #b3412e;
+  --mute: #6b7a88;
+  --focus: #e0a100;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1b27;
+    --card: #162636;
+    --ink: #e6eef5;
+    --ink-soft: #9db0c1;
+    --line: #2a3f53;
+    --accent: #5ab4d1;
+    --accent-ink: #0b1620;
+    --ok: #52c29a;
+    --warn: #e0a447;
+    --bad: #ee826c;
+    --mute: #8fa2b3;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1b27;
+  --card: #162636;
+  --ink: #e6eef5;
+  --ink-soft: #9db0c1;
+  --line: #2a3f53;
+  --accent: #5ab4d1;
+  --accent-ink: #0b1620;
+  --ok: #52c29a;
+  --warn: #e0a447;
+  --bad: #ee826c;
+  --mute: #8fa2b3;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(1.9rem, 4vw, 2.7rem); line-height: 1.05; margin: 0 0 8px; letter-spacing: -0.02em; }
+.lede { margin: 0; max-width: 56ch; color: var(--ink-soft); }
+.chain { font-size: 0.9rem; color: var(--ink-soft); text-align: right; }
+.chain code { font-size: 0.85rem; background: var(--card); border: 1px solid var(--line); padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+
+.layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .chain { text-align: left; } }
+
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+.panel h2 { font-family: var(--display); font-size: 1.15rem; margin: 0 0 12px; font-weight: 700; }
+.panel p.hint { margin: 0 0 12px; font-size: 0.88rem; color: var(--ink-soft); }
+
+label { display: block; font-size: 0.88rem; font-weight: 500; margin: 12px 0 4px; }
+input, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px;
+}
+textarea { resize: vertical; min-height: 72px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn {
+  font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink);
+  border: 1px solid var(--accent); border-radius: 6px; padding: 8px 14px;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: 0.6; cursor: progress; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+.btn.block { width: 100%; margin-top: 16px; padding: 11px; }
+.btn.small { padding: 5px 10px; font-size: 0.85rem; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.who { font-size: 0.9rem; word-break: break-all; margin: 0 0 8px; }
+.who strong { font-weight: 600; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 18px; padding: 0; }
+.stats div { display: flex; gap: 8px; align-items: baseline; }
+.stats dt { color: var(--ink-soft); font-size: 0.9rem; }
+.stats dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+
+.ledger-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ledger-head h2 { font-family: var(--display); font-size: 1.4rem; margin: 0; }
+
+.loan {
+  position: relative; background: var(--card); border: 1px solid var(--line);
+  border-left: 6px solid var(--mute); border-radius: 10px; padding: 18px 18px 16px; margin-bottom: 16px;
+}
+.loan[data-status="REQUESTED"] { border-left-color: var(--warn); }
+.loan[data-status="REVIEWED"] { border-left-color: var(--accent); }
+.loan[data-status="ACTIVE"] { border-left-color: var(--accent); }
+.loan[data-status="REPAID"] { border-left-color: var(--ok); }
+.loan[data-status="DEFAULTED"] { border-left-color: var(--bad); }
+.loan-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.loan h3 { font-family: var(--display); font-size: 1.2rem; margin: 0; }
+.amount { font-family: var(--display); font-size: 1.7rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.amount small { font-family: var(--body); font-size: 0.85rem; font-weight: 400; color: var(--ink-soft); }
+.stamp {
+  font-family: var(--display); font-weight: 700; font-size: 0.95rem;
+  border: 2px solid currentColor; border-radius: 4px; padding: 2px 10px;
+  transform: rotate(-3deg); color: var(--mute); white-space: nowrap;
+}
+.loan[data-status="REQUESTED"] .stamp { color: var(--warn); }
+.loan[data-status="REVIEWED"] .stamp, .loan[data-status="ACTIVE"] .stamp { color: var(--accent); }
+.loan[data-status="REPAID"] .stamp { color: var(--ok); }
+.loan[data-status="DEFAULTED"] .stamp { color: var(--bad); }
+.purpose { margin: 10px 0 12px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px 18px; font-size: 0.88rem; color: var(--ink-soft); margin: 0 0 14px; }
+.meta b { color: var(--ink); font-weight: 500; }
+.meta a { word-break: break-all; }
+
+.meter { margin: 10px 0 4px; }
+.meter-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 4px; }
+.track { position: relative; height: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 99px; overflow: visible; }
+.fill { height: 100%; border-radius: 99px; background: var(--accent); }
+.fill.ok { background: var(--ok); }
+.tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); opacity: 0.55; }
+
+details { margin-top: 10px; font-size: 0.9rem; }
+summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+details pre { white-space: pre-wrap; word-break: break-word; font: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 8px 0 0; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.actions input { width: 120px; }
+
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; color: var(--ink-soft); }
+
+#status {
+  position: sticky; top: 0; z-index: 5; margin: 0 0 18px; padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--card); font-size: 0.92rem; display: none;
+}
+#status.show { display: block; }
+#status.err { border-color: var(--bad); color: var(--bad); }
+#status.ok { border-color: var(--ok); }
+
+.log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; font-size: 0.82rem; color: var(--ink-soft); }
+.log li { padding: 5px 0; border-top: 1px solid var(--line); word-break: break-all; }
+.log li:first-child { border-top: 0; }
+
+footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width: 70ch; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .stamp { transition: transform 0.2s; }
+  .loan:hover .stamp { transform: rotate(0deg); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Borrow on reputation, reviewed by validators</h1>
+      <p class="lede">An Intelligent Contract on GenLayer that records loan requests, scores a borrower's public profile with AI consensus, and tracks repayment. This is a Studionet prototype: no tokens or real funds move.</p>
+    </div>
+    <div class="chain">
+      Contract<br>
+      <code id="contractAddr"></code><br>
+      <a id="explorerLink" target="_blank" rel="noopener">View in explorer</a>
+    </div>
+  </header>
+
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <div class="layout">
+    <aside>
+      <section class="panel" aria-labelledby="acct-h">
+        <h2 id="acct-h">Your account</h2>
+        <p class="hint">A test account is created in this browser the first time you open the page. It only works on Studionet.</p>
+        <p class="who"><strong>Address</strong><br><span id="acctAddr">…</span></p>
+        <div class="btns">
+          <button class="btn ghost small" id="copyAddr" type="button">Copy address</button>
+          <button class="btn ghost small" id="newAcct" type="button">New account</button>
+          <button class="btn ghost small" id="importKey" type="button">Import key</button>
+        </div>
+        <p class="hint" style="margin-top:12px">Use a different account for the lender than for the borrower. Owner-only actions need the account that deployed the contract.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="req-h">
+        <h2 id="req-h">Request a loan</h2>
+        <div class="row2">
+          <div><label for="fAmount">Amount (units)</label><input id="fAmount" inputmode="numeric" placeholder="1000"></div>
+          <div><label for="fTerm">Term (days)</label><input id="fTerm" inputmode="numeric" placeholder="30"></div>
+        </div>
+        <label for="fPurpose">What is the loan for?</label>
+        <textarea id="fPurpose" maxlength="500" placeholder="Working capital for a small shop"></textarea>
+        <label for="fUrl">Public profile link</label>
+        <input id="fUrl" type="url" placeholder="https://raw.githubusercontent.com/you/repo/main/README.md">
+        <p class="hint" style="margin-top:6px">Validators read this page to score the request. Plain-text pages work best; a GitHub profile page usually scores 0.</p>
+        <button class="btn block" id="submitLoan" type="button">Request loan</button>
+      </section>
+
+      <section class="panel" aria-labelledby="rep-h">
+        <h2 id="rep-h">Borrower history</h2>
+        <label for="repAddr" style="margin-top:0">Borrower address</label>
+        <input id="repAddr" placeholder="0x…">
+        <div class="btns"><button class="btn ghost small" id="repGo" type="button">Look up</button><button class="btn ghost small" id="repMe" type="button">My account</button></div>
+        <p class="hint" id="repOut" style="margin:12px 0 0"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="adm-h">
+        <h2 id="adm-h">Minimum score</h2>
+        <p class="hint">A lender can only approve a loan whose AI score meets this minimum. Only the contract owner can change it.</p>
+        <label for="fMin" style="margin-top:0">New minimum (0–100)</label>
+        <input id="fMin" inputmode="numeric" placeholder="40">
+        <button class="btn block" id="setMin" type="button">Update minimum</button>
+      </section>
+
+      <section class="panel" aria-labelledby="log-h">
+        <h2 id="log-h">Activity</h2>
+        <ul class="log" id="log"><li>Nothing yet.</li></ul>
+      </section>
+    </aside>
+
+    <main>
+      <dl class="stats" id="stats">
+        <div><dt>Loans</dt><dd id="sLoans">–</dd></div>
+        <div><dt>Minimum score</dt><dd id="sMin">–</dd></div>
+      </dl>
+      <div class="ledger-head">
+        <h2>Loan ledger</h2>
+        <button class="btn ghost small" id="refresh" type="button">Refresh</button>
+      </div>
+      <div id="ledger"></div>
+    </main>
+  </div>
+
+  <footer>
+    Prototype only. The contract records status and history; it does not escrow or transfer funds. AI scores summarize public evidence and are not a guarantee of repayment.
+  </footer>
+</div>
+
+<script type="module">
+import { createClient, createAccount, generatePrivateKey } from "https://esm.sh/genlayer-js";
+import { studionet } from "https://esm.sh/genlayer-js/chains";
+
+const CONTRACT = "0xdCeb4d9111807Ba42ff3467b90898d3c05e4Db44";
+const EXPLORER = "https://explorer-studio.genlayer.com/address/" + CONTRACT;
+const KEY_STORE = "ucl_demo_private_key";
+const MAX_LOANS_SHOWN = 30;
+
+const $ = (id) => document.getElementById(id);
+
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v === false || v == null) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+function plain(v) {
+  if (v instanceof Map) return Object.fromEntries([...v.entries()].map(([k, x]) => [k, plain(x)]));
+  if (typeof v === "bigint") return v.toString();
+  if (Array.isArray(v)) return v.map(plain);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]));
+  return v;
+}
+
+const short = (a) => (a && a.length > 12 ? a.slice(0, 6) + "…" + a.slice(-4) : a || "–");
+const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+
+/* ---------- account + client ---------- */
+let account;
+let client;
+
+function loadAccount() {
+  let pk = localStorage.getItem(KEY_STORE);
+  if (!pk) {
+    pk = generatePrivateKey();
+    localStorage.setItem(KEY_STORE, pk);
+  }
+  account = createAccount(pk);
+  client = createClient({ chain: studionet, account });
+  $("acctAddr").textContent = account.address;
+}
+
+/* ---------- status + log ---------- */
+let statusTimer;
+function say(message, kind = "") {
+  const el = $("status");
+  el.textContent = message;
+  el.className = "show " + kind;
+  clearTimeout(statusTimer);
+  if (kind) statusTimer = setTimeout(() => { el.className = ""; }, 9000);
+}
+function log(message) {
+  const list = $("log");
+  if (list.children.length === 1 && list.children[0].textContent === "Nothing yet.") list.innerHTML = "";
+  list.prepend(h("li", {}, new Date().toLocaleTimeString() + "  " + message));
+}
+
+/* ---------- contract calls ---------- */
+async function read(functionName, args = []) {
+  const res = await client.readContract({ address: CONTRACT, functionName, args });
+  return plain(res);
+}
+
+function executionError(receipt) {
+  const lr = receipt?.consensus_data?.leader_receipt?.[0];
+  const result = lr?.execution_result || receipt?.txExecutionResultName || receipt?.result_name;
+  const failed = result === "ERROR" || result === "FINISHED_WITH_ERROR";
+  if (!failed) return null;
+  const text = lr?.genvm_result?.stderr || lr?.result?.payload?.readable || "";
+  const last = String(text).trim().split("\n").filter(Boolean).pop();
+  return last || "The contract rejected this action.";
+}
+
+async function write(functionName, args = []) {
+  const hash = await client.writeContract({ address: CONTRACT, functionName, args, value: 0n });
+  log(functionName + " sent " + short(hash));
+  say("Waiting for validators to agree on " + functionName + ". Reviews can take a minute or two.");
+  const receipt = await client.waitForTransactionReceipt({ hash, status: "ACCEPTED", retries: 120, interval: 3000 });
+  const err = executionError(receipt);
+  if (err) {
+    log(functionName + " rejected: " + err);
+    throw new Error(err);
+  }
+  log(functionName + " accepted");
+  return receipt;
+}
+
+async function run(button, work, doneMessage) {
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = "Waiting…";
+  try {
+    await work();
+    say(doneMessage, "ok");
+  } catch (e) {
+    say(friendly(e), "err");
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+    refresh();
+  }
+}
+
+function friendly(e) {
+  const m = String(e?.message || e);
+  const known = [
+    "Borrower cannot approve their own loan",
+    "AI review score is below the minimum required",
+    "Only the borrower can record repayment",
+    "Only the borrower can cancel the loan",
+    "Only contract owner can mark a default",
+    "Only contract owner can set the minimum score",
+    "Loan must be in REQUESTED status",
+    "Loan must be reviewed before approval",
+    "Loan is not active",
+    "Only a pending loan can be cancelled",
+    "Only an active loan can be marked default",
+  ].find((k) => m.includes(k));
+  return known || m.split("\n")[0].slice(0, 220);
+}
+
+/* ---------- rendering ---------- */
+let minScore = 0;
+
+function loanCard(l) {
+  const amount = BigInt(l.amount_units || "0");
+  const repaid = BigInt(l.total_repaid_units || "0");
+  const pct = amount > 0n ? Number((repaid * 100n) / amount) : 0;
+  const score = Number(l.ai_score || 0);
+  const isMine = same(l.borrower, account.address);
+
+  const actions = h("div", { class: "actions" });
+  const act = (label, cls, fn, done) =>
+    h("button", { class: "btn small " + cls, type: "button", onclick: (e) => run(e.currentTarget, fn, done) }, label);
+
+  if (l.status === "REQUESTED") {
+    actions.append(
+      act("Review borrower", "", () => write("review_borrower", [l.loan_id]), "Review saved for loan #" + l.loan_id + "."),
+      act("Cancel", "ghost", () => write("cancel_loan", [l.loan_id]), "Loan #" + l.loan_id + " cancelled.")
+    );
+  } else if (l.status === "REVIEWED") {
+    actions.append(
+      act("Approve as lender", "", () => write("approve_loan", [l.loan_id]), "Loan #" + l.loan_id + " approved."),
+      act("Cancel", "ghost", () => write("cancel_loan", [l.loan_id]), "Loan #" + l.loan_id + " cancelled.")
+    );
+  } else if (l.status === "ACTIVE") {
+    const input = h("input", { type: "text", inputmode: "numeric", placeholder: "Amount", "aria-label": "Repayment amount for loan " + l.loan_id });
+    actions.append(
+      input,
+      act("Record repayment", "", () => {
+        const v = input.value.trim();
+        if (!/^\d+$/.test(v) || v === "0") throw new Error("Enter a repayment amount above 0.");
+        return write("record_repayment", [l.loan_id, BigInt(v)]);
+      }, "Repayment recorded for loan #" + l.loan_id + "."),
+      act("Mark default", "danger", () => write("mark_default", [l.loan_id]), "Loan #" + l.loan_id + " marked as defaulted.")
+    );
+  }
+
+  const meter = h("div", { class: "meter" },
+    h("div", { class: "meter-label" }, h("span", {}, "AI score " + score + " / 100"), h("span", {}, "Minimum " + minScore)),
+    h("div", { class: "track" },
+      h("div", { class: "fill", style: "width:" + score + "%" }),
+      h("div", { class: "tick", style: "left:" + minScore + "%", title: "Minimum score" })
+    )
+  );
+
+  const repay = h("div", { class: "meter" },
+    h("div", { class: "meter-label" }, h("span", {}, "Repaid " + repaid + " of " + amount), h("span", {}, pct + "%")),
+    h("div", { class: "track" }, h("div", { class: "fill ok", style: "width:" + Math.min(pct, 100) + "%" }))
+  );
+
+  const urlOk = /^https:\/\//.test(l.profile_url || "");
+
+  return h("article", { class: "loan", "data-status": l.status },
+    h("div", { class: "loan-top" },
+      h("div", {},
+        h("h3", {}, "Loan #" + l.loan_id + (isMine ? " (yours)" : "")),
+        h("div", { class: "amount" }, String(amount), " ", h("small", {}, "units over " + l.term_days + " days"))
+      ),
+      h("span", { class: "stamp" }, l.status.charAt(0) + l.status.slice(1).toLowerCase())
+    ),
+    h("p", { class: "purpose" }, l.purpose),
+    h("div", { class: "meta" },
+      h("div", {}, "Borrower ", h("b", {}, short(l.borrower))),
+      h("div", {}, "Lender ", h("b", {}, l.lender ? short(l.lender) : "None yet")),
+      h("div", {}, "Evidence ", urlOk ? h("a", { href: l.profile_url, target: "_blank", rel: "noopener noreferrer" }, l.profile_url) : h("b", {}, l.profile_url))
+    ),
+    l.status === "REQUESTED" ? null : meter,
+    ["ACTIVE", "REPAID", "DEFAULTED"].includes(l.status) ? repay : null,
+    l.ai_review ? h("details", {}, h("summary", {}, "Validator review"), h("pre", {}, l.ai_review)) : null,
+    actions.children.length ? actions : null
+  );
+}
+
+async function refresh() {
+  try {
+    const stats = await read("get_protocol_stats");
+    minScore = Number(stats.min_score || 0);
+    const count = Number(stats.loan_count || 0);
+    $("sLoans").textContent = count;
+    $("sMin").textContent = minScore;
+
+    const ledger = $("ledger");
+    if (count === 0) {
+      ledger.replaceChildren(h("div", { class: "empty" }, "No loans yet. Request the first one from the form."));
+      return;
+    }
+    const first = Math.max(1, count - MAX_LOANS_SHOWN + 1);
+    const ids = [];
+    for (let i = count; i >= first; i--) ids.push(String(i));
+    const loans = await Promise.all(ids.map((id) => read("get_loan", [id]).catch(() => null)));
+    ledger.replaceChildren(...loans.filter(Boolean).map(loanCard));
+  } catch (e) {
+    $("ledger").replaceChildren(h("div", { class: "empty" }, "Could not read the contract. Check your connection and refresh. (" + friendly(e) + ")"));
+  }
+}
+
+async function lookupReputation(addr) {
+  const out = $("repOut");
+  if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { out.textContent = "Enter a full address starting with 0x."; return; }
+  out.textContent = "Looking up…";
+  try {
+    const r = await read("get_borrower_reputation", [addr]);
+    out.textContent = r.completed_loans + " loans repaid, " + r.defaulted_loans + " defaulted. On-chain history only.";
+  } catch (e) {
+    out.textContent = friendly(e);
+  }
+}
+
+/* ---------- wiring ---------- */
+$("contractAddr").textContent = CONTRACT;
+$("explorerLink").href = EXPLORER;
+
+$("copyAddr").onclick = async () => {
+  try { await navigator.clipboard.writeText(account.address); say("Address copied.", "ok"); }
+  catch { say("Copy failed. Select the address and copy it manually.", "err"); }
+};
+$("newAcct").onclick = () => {
+  if (!confirm("Create a new test account? The current one stays only if you saved its key elsewhere.")) return;
+  localStorage.removeItem(KEY_STORE);
+  loadAccount();
+  say("New test account created.", "ok");
+  refresh();
+};
+$("importKey").onclick = () => {
+  const pk = prompt("Paste a Studionet test account private key (0x…). Never use a key that holds real funds.");
+  if (!pk) return;
+  try {
+    const trimmed = pk.trim();
+    createAccount(trimmed);
+    localStorage.setItem(KEY_STORE, trimmed);
+    loadAccount();
+    say("Account imported.", "ok");
+    refresh();
+  } catch {
+    say("That key is not valid. It should start with 0x and have 64 hex characters.", "err");
+  }
+};
+
+$("submitLoan").onclick = (e) => {
+  const amount = $("fAmount").value.trim();
+  const term = $("fTerm").value.trim();
+  const purpose = $("fPurpose").value.trim();
+  const url = $("fUrl").value.trim();
+  if (!/^\d+$/.test(amount) || amount === "0") return say("Enter an amount above 0.", "err");
+  if (!/^\d+$/.test(term) || Number(term) < 1 || Number(term) > 365) return say("Term must be between 1 and 365 days.", "err");
+  if (purpose.length < 1 || purpose.length > 500) return say("Describe the purpose in 1 to 500 characters.", "err");
+  if (!url.startsWith("https://")) return say("The profile link must start with https://", "err");
+  run(e.currentTarget, async () => {
+    await write("request_loan", [BigInt(amount), BigInt(term), purpose, url]);
+    $("fAmount").value = ""; $("fTerm").value = ""; $("fPurpose").value = ""; $("fUrl").value = "";
+  }, "Loan requested. Next, run the borrower review on it in the ledger.");
+};
+
+$("setMin").onclick = (e) => {
+  const v = $("fMin").value.trim();
+  if (!/^\d+$/.test(v) || Number(v) > 100) return say("Enter a whole number from 0 to 100.", "err");
+  run(e.currentTarget, () => write("set_min_score", [BigInt(v)]), "Minimum score is now " + v + ".");
+};
+
+$("repGo").onclick = () => lookupReputation($("repAddr").value.trim());
+$("repMe").onclick = () => { $("repAddr").value = account.address; lookupReputation(account.address); };
+$("refresh").onclick = refresh;
+
+loadAccount();
+refresh();
+</script>
+</body>
+</html>
