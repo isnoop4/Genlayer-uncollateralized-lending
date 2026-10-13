@@ -55,7 +55,7 @@
   --mute: #8fa2b3;
 }
 * { box-sizing: border-box; }
-html { color-scheme: light dark; }
+html { color-scheme: light dark; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--paper);
@@ -158,8 +158,9 @@ details pre { white-space: pre-wrap; word-break: break-word; font: inherit; back
 
 #status {
   position: sticky; top: 0; z-index: 5; margin: 0 0 18px; padding: 10px 14px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--card); font-size: 0.92rem; display: none;
+  border: 1px solid var(--line); background: var(--card); font-size: 0.92rem; display: none; overflow: hidden;
 }
+#status.wait { border-color: var(--accent); }
 #status.show { display: block; }
 #status.err { border-color: var(--bad); color: var(--bad); }
 #status.ok { border-color: var(--ok); }
@@ -170,9 +171,69 @@ details pre { white-space: pre-wrap; word-break: break-word; font: inherit; back
 
 footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width: 70ch; }
 
+.burst { position: absolute; top: 34px; right: 70px; width: 0; height: 0; pointer-events: none; }
+.burst i { position: absolute; left: 0; top: 0; width: 8px; height: 8px; border-radius: 2px; background: var(--c); opacity: 0; }
+
 @media (prefers-reduced-motion: no-preference) {
   .stamp { transition: transform 0.2s; }
   .loan:hover .stamp { transform: rotate(0deg); }
+
+  /* Status banner: slides in, and a sweeping bar shows validators are still working */
+  #status.show { animation: drop 0.25s ease-out; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-8px); } }
+  #status.wait::after {
+    content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 35%;
+    background: var(--accent); animation: sweep 1.3s ease-in-out infinite;
+  }
+  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
+  /* Buttons that are waiting on a transaction */
+  .btn.busy::before {
+    content: ""; display: inline-block; width: 0.8em; height: 0.8em; margin-right: 8px;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    vertical-align: -0.1em; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Ledger: each stamp slams onto its note, one after another */
+  .loan.enter .stamp, .loan.changed .stamp {
+    animation: stampIn 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+  }
+  @keyframes stampIn {
+    0% { opacity: 0; transform: scale(2.4) rotate(-14deg); }
+    55% { opacity: 1; transform: scale(0.92) rotate(-3deg); }
+    100% { transform: scale(1) rotate(-3deg); }
+  }
+
+  /* Progress bars fill in after the stamp lands */
+  .loan.enter .fill, .loan.changed .fill {
+    transform-origin: left center;
+    animation: grow 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms + 350ms);
+  }
+  @keyframes grow { from { transform: scaleX(0); } }
+
+  /* A loan whose status just changed gets a ring that fades out */
+  .loan.changed { animation: flash 1.4s ease-out; }
+  @keyframes flash {
+    from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); }
+    to { box-shadow: 0 0 0 4px transparent; }
+  }
+  .loan.shake { animation: flash 1.4s ease-out, shake 0.5s 0.15s; }
+  @keyframes shake {
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+  }
+
+  /* Repaid loans get a short burst */
+  .burst i { animation: pop 0.95s cubic-bezier(0.15, 0.7, 0.3, 1) 0.45s forwards; }
+  @keyframes pop {
+    0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(0.6); }
+  }
 }
 </style>
 </head>
@@ -319,7 +380,7 @@ function say(message, kind = "") {
   el.textContent = message;
   el.className = "show " + kind;
   clearTimeout(statusTimer);
-  if (kind) statusTimer = setTimeout(() => { el.className = ""; }, 9000);
+  if (kind && kind !== "wait") statusTimer = setTimeout(() => { el.className = ""; }, 9000);
 }
 function log(message) {
   const list = $("log");
@@ -346,7 +407,7 @@ function executionError(receipt) {
 async function write(functionName, args = []) {
   const hash = await client.writeContract({ address: CONTRACT, functionName, args, value: 0n });
   log(functionName + " sent " + short(hash));
-  say("Waiting for validators to agree on " + functionName + ". Reviews can take a minute or two.");
+  say("Waiting for validators to agree on " + functionName + ". Reviews can take a minute or two.", "wait");
   const receipt = await client.waitForTransactionReceipt({ hash, status: "ACCEPTED", retries: 120, interval: 3000 });
   const err = executionError(receipt);
   if (err) {
@@ -360,6 +421,7 @@ async function write(functionName, args = []) {
 async function run(button, work, doneMessage) {
   const label = button.textContent;
   button.disabled = true;
+  button.classList.add("busy");
   button.textContent = "Waiting…";
   try {
     await work();
@@ -368,6 +430,7 @@ async function run(button, work, doneMessage) {
     say(friendly(e), "err");
   } finally {
     button.disabled = false;
+    button.classList.remove("busy");
     button.textContent = label;
     refresh();
   }
@@ -391,10 +454,41 @@ function friendly(e) {
   return known || m.split("\n")[0].slice(0, 220);
 }
 
+/* ---------- motion helpers ---------- */
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+const seen = new Map(); // loan id -> last status shown, so only new or changed loans animate
+let refreshToken = 0;
+
+function countTo(el, to) {
+  const from = Number(el.textContent) || 0;
+  if (from === to || reduce.matches) { el.textContent = to; return; }
+  const start = performance.now();
+  const tick = (t) => {
+    const p = Math.min((t - start) / 600, 1);
+    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function burst() {
+  const colors = ["var(--ok)", "var(--accent)", "var(--warn)"];
+  const box = h("div", { class: "burst", "aria-hidden": "true" });
+  for (let i = 0; i < 20; i++) {
+    const angle = (Math.PI * 2 * i) / 20 + Math.random() * 0.4;
+    const dist = 60 + Math.random() * 70;
+    const x = Math.round(Math.cos(angle) * dist);
+    const y = Math.round(Math.sin(angle) * dist - 20);
+    const r = Math.round(Math.random() * 540 - 270);
+    box.append(h("i", { style: "--c:" + colors[i % 3] + ";--x:" + x + "px;--y:" + y + "px;--r:" + r + "deg" }));
+  }
+  return box;
+}
+
 /* ---------- rendering ---------- */
 let minScore = 0;
 
-function loanCard(l) {
+function loanCard(l, anim = "", idx = 0) {
   const amount = BigInt(l.amount_units || "0");
   const repaid = BigInt(l.total_repaid_units || "0");
   const pct = amount > 0n ? Number((repaid * 100n) / amount) : 0;
@@ -443,7 +537,8 @@ function loanCard(l) {
 
   const urlOk = /^https:\/\//.test(l.profile_url || "");
 
-  return h("article", { class: "loan", "data-status": l.status },
+  const cls = "loan" + (anim ? " " + anim : "") + (anim === "changed" && l.status === "DEFAULTED" ? " shake" : "");
+  const card = h("article", { class: cls, style: "--i:" + Math.min(idx, 6), "data-status": l.status },
     h("div", { class: "loan-top" },
       h("div", {},
         h("h3", {}, "Loan #" + l.loan_id + (isMine ? " (yours)" : "")),
@@ -462,15 +557,19 @@ function loanCard(l) {
     l.ai_review ? h("details", {}, h("summary", {}, "Validator review"), h("pre", {}, l.ai_review)) : null,
     actions.children.length ? actions : null
   );
+  if (anim === "changed" && l.status === "REPAID" && !reduce.matches) card.append(burst());
+  return card;
 }
 
 async function refresh() {
+  const token = ++refreshToken;
   try {
     const stats = await read("get_protocol_stats");
+    if (token !== refreshToken) return;
     minScore = Number(stats.min_score || 0);
     const count = Number(stats.loan_count || 0);
-    $("sLoans").textContent = count;
-    $("sMin").textContent = minScore;
+    countTo($("sLoans"), count);
+    countTo($("sMin"), minScore);
 
     const ledger = $("ledger");
     if (count === 0) {
@@ -481,7 +580,15 @@ async function refresh() {
     const ids = [];
     for (let i = count; i >= first; i--) ids.push(String(i));
     const loans = await Promise.all(ids.map((id) => read("get_loan", [id]).catch(() => null)));
-    ledger.replaceChildren(...loans.filter(Boolean).map(loanCard));
+    if (token !== refreshToken) return;
+
+    const cards = loans.filter(Boolean).map((l, idx) => {
+      const prev = seen.get(l.loan_id);
+      const anim = prev === undefined ? "enter" : prev !== l.status ? "changed" : "";
+      seen.set(l.loan_id, l.status);
+      return loanCard(l, anim, idx);
+    });
+    ledger.replaceChildren(...cards);
   } catch (e) {
     $("ledger").replaceChildren(h("div", { class: "empty" }, "Could not read the contract. Check your connection and refresh. (" + friendly(e) + ")"));
   }
