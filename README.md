@@ -86,7 +86,7 @@ Deployed and tested in [GenLayer Studio](https://studio.genlayer.com) with two a
 ### Run locally
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
+git clone https://github.com/isnoop4/Genlayer-uncollateralized-lending.git
 cd <repo-name>
 python3 -m http.server 8000
 # open http://localhost:8000
