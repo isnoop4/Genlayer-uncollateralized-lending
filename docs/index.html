@@ -140,6 +140,15 @@ textarea { resize: vertical; min-height: 72px; }
 .meta b { color: var(--ink); font-weight: 500; }
 .meta a { word-break: break-all; }
 
+.verify { border: 1px dashed var(--warn); border-radius: 8px; padding: 12px; margin: 0 0 14px; font-size: 0.9rem; }
+.verify strong { font-weight: 600; }
+.verify code { display: block; margin: 8px 0; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; word-break: break-all; font-size: 0.82rem; user-select: all; }
+.verify.ok { border-color: var(--ok); border-style: solid; }
+.verify.bad { border-color: var(--bad); border-style: solid; }
+.pill { display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); }
+.pill.bad { color: var(--bad); }
+
 .meter { margin: 10px 0 4px; }
 .meter-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 4px; }
 .track { position: relative; height: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 99px; overflow: visible; }
@@ -153,6 +162,7 @@ details pre { white-space: pre-wrap; word-break: break-word; font: inherit; back
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
 .actions input { width: 120px; }
+.note { font-size: 0.85rem; color: var(--ink-soft); margin: 10px 0 0; }
 
 .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; color: var(--ink-soft); }
 
@@ -178,7 +188,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   .stamp { transition: transform 0.2s; }
   .loan:hover .stamp { transform: rotate(0deg); }
 
-  /* Status banner: slides in, and a sweeping bar shows validators are still working */
   #status.show { animation: drop 0.25s ease-out; }
   @keyframes drop { from { opacity: 0; transform: translateY(-8px); } }
   #status.wait::after {
@@ -187,7 +196,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   }
   @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
-  /* Buttons that are waiting on a transaction */
   .btn.busy::before {
     content: ""; display: inline-block; width: 0.8em; height: 0.8em; margin-right: 8px;
     border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
@@ -195,7 +203,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Ledger: each stamp slams onto its note, one after another */
   .loan.enter .stamp, .loan.changed .stamp {
     animation: stampIn 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
     animation-delay: calc(var(--i, 0) * 90ms + 150ms);
@@ -206,7 +213,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
     100% { transform: scale(1) rotate(-3deg); }
   }
 
-  /* Progress bars fill in after the stamp lands */
   .loan.enter .fill, .loan.changed .fill {
     transform-origin: left center;
     animation: grow 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
@@ -214,7 +220,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   }
   @keyframes grow { from { transform: scaleX(0); } }
 
-  /* A loan whose status just changed gets a ring that fades out */
   .loan.changed { animation: flash 1.4s ease-out; }
   @keyframes flash {
     from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); }
@@ -228,7 +233,6 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
     80% { transform: translateX(2px); }
   }
 
-  /* Repaid loans get a short burst */
   .burst i { animation: pop 0.95s cubic-bezier(0.15, 0.7, 0.3, 1) 0.45s forwards; }
   @keyframes pop {
     0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
@@ -242,7 +246,7 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   <header class="top">
     <div>
       <h1>Borrow on reputation, reviewed by validators</h1>
-      <p class="lede">An Intelligent Contract on GenLayer that records loan requests, scores a borrower's public profile with AI consensus, and tracks repayment. This is a Studionet prototype: no tokens or real funds move.</p>
+      <p class="lede">An Intelligent Contract on GenLayer that records loan requests, scores a borrower's public profile with AI consensus, and tracks repayment. The profile must prove it belongs to the borrower, and repayments only count once the lender confirms them. This is a Studionet prototype: no tokens or real funds move.</p>
     </div>
     <div class="chain">
       Contract<br>
@@ -265,7 +269,7 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
           <button class="btn ghost small" id="switchAcct" type="button">Switch account</button>
           <button class="btn ghost small" id="importKey" type="button">Import key</button>
         </div>
-        <p class="hint" style="margin-top:12px">Use a different account for the lender than for the borrower. Owner-only actions need the account that deployed the contract.</p>
+        <p class="hint" style="margin-top:12px">Use a different account for the lender than for the borrower. The lender and borrower must be different accounts, and only the lender can confirm repayments.</p>
       </section>
 
       <section class="panel" aria-labelledby="req-h">
@@ -278,7 +282,7 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
         <textarea id="fPurpose" maxlength="500" placeholder="Working capital for a small shop"></textarea>
         <label for="fUrl">Public profile link</label>
         <input id="fUrl" type="url" placeholder="https://raw.githubusercontent.com/you/repo/main/README.md">
-        <p class="hint" style="margin-top:6px">Validators read this page to score the request. Plain-text pages work best; a GitHub profile page usually scores 0.</p>
+        <p class="hint" style="margin-top:6px">After you request, the loan shows a verification code. Paste it on this page (you must be able to edit it), then run the review. Without the code, the score is 0. Plain-text pages work best.</p>
         <button class="btn block" id="submitLoan" type="button">Request loan</button>
       </section>
 
@@ -318,7 +322,7 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
   </div>
 
   <footer>
-    Prototype only. The contract records status and history; it does not escrow or transfer funds. AI scores summarize public evidence and are not a guarantee of repayment.
+    Prototype only. The contract records status and history; it does not escrow or transfer funds. AI scores summarize public evidence and are not a guarantee of repayment. Reputation counts only lender-confirmed outcomes, and each borrower–lender pair counts once.
   </footer>
 </div>
 
@@ -326,7 +330,7 @@ footer { margin-top: 36px; font-size: 0.85rem; color: var(--ink-soft); max-width
 import { createClient, createAccount, generatePrivateKey } from "https://esm.sh/genlayer-js";
 import { studionet } from "https://esm.sh/genlayer-js/chains";
 
-const CONTRACT = "0xdCeb4d9111807Ba42ff3467b90898d3c05e4Db44";
+const CONTRACT = "0xB0CE8d3185AC9e4906e9cb26335E792556F1d30D";
 const EXPLORER = "https://explorer-studio.genlayer.com/address/" + CONTRACT;
 const KEY_STORE = "ucl_demo_private_key";
 const MAX_LOANS_SHOWN = 30;
@@ -463,10 +467,13 @@ function friendly(e) {
   const m = String(e?.message || e);
   const known = [
     "Borrower cannot approve their own loan",
+    "Profile evidence is not bound to the borrower",
     "AI review score is below the minimum required",
-    "Only the borrower can record repayment",
+    "Only the borrower can report repayment",
+    "Only the loan's lender can confirm repayment",
+    "Confirmed amount exceeds the reported repayment",
     "Only the borrower can cancel the loan",
-    "Only contract owner can mark a default",
+    "Only the lender or contract owner can mark a default",
     "Only contract owner can set the minimum score",
     "Loan must be in REQUESTED status",
     "Loan must be reviewed before approval",
@@ -511,12 +518,21 @@ function burst() {
 /* ---------- rendering ---------- */
 let minScore = 0;
 
+function positiveInt(value, message) {
+  const v = String(value).trim();
+  if (!/^\d+$/.test(v) || v === "0") throw new Error(message);
+  return BigInt(v);
+}
+
 function loanCard(l, anim = "", idx = 0) {
   const amount = BigInt(l.amount_units || "0");
   const repaid = BigInt(l.total_repaid_units || "0");
+  const pending = BigInt(l.pending_repayment_units || "0");
   const pct = amount > 0n ? Number((repaid * 100n) / amount) : 0;
   const score = Number(l.ai_score || 0);
   const isMine = same(l.borrower, account.address);
+  const isLender = same(l.lender, account.address);
+  const bound = l.evidence_bound === "YES";
 
   const actions = h("div", { class: "actions" });
   const act = (label, cls, fn, done) =>
@@ -533,14 +549,13 @@ function loanCard(l, anim = "", idx = 0) {
       act("Cancel", "ghost", () => write("cancel_loan", [l.loan_id]), "Loan #" + l.loan_id + " cancelled.")
     );
   } else if (l.status === "ACTIVE") {
-    const input = h("input", { type: "text", inputmode: "numeric", placeholder: "Amount", "aria-label": "Repayment amount for loan " + l.loan_id });
+    const rep = h("input", { type: "text", inputmode: "numeric", placeholder: "Amount", "aria-label": "Repayment amount to report for loan " + l.loan_id });
+    const conf = h("input", { type: "text", inputmode: "numeric", placeholder: "Amount", value: pending > 0n ? String(pending) : "", "aria-label": "Repayment amount to confirm for loan " + l.loan_id });
     actions.append(
-      input,
-      act("Record repayment", "", () => {
-        const v = input.value.trim();
-        if (!/^\d+$/.test(v) || v === "0") throw new Error("Enter a repayment amount above 0.");
-        return write("record_repayment", [l.loan_id, BigInt(v)]);
-      }, "Repayment recorded for loan #" + l.loan_id + "."),
+      rep,
+      act("Report repayment", "", () => write("report_repayment", [l.loan_id, positiveInt(rep.value, "Enter a repayment amount above 0.")]), "Repayment reported for loan #" + l.loan_id + ". The lender must confirm it."),
+      conf,
+      act("Confirm repayment", "", () => write("confirm_repayment", [l.loan_id, positiveInt(conf.value, "Enter the amount you received, above 0.")]), "Repayment confirmed for loan #" + l.loan_id + "."),
       act("Mark default", "danger", () => write("mark_default", [l.loan_id]), "Loan #" + l.loan_id + " marked as defaulted.")
     );
   }
@@ -554,9 +569,31 @@ function loanCard(l, anim = "", idx = 0) {
   );
 
   const repay = h("div", { class: "meter" },
-    h("div", { class: "meter-label" }, h("span", {}, "Repaid " + repaid + " of " + amount), h("span", {}, pct + "%")),
+    h("div", { class: "meter-label" },
+      h("span", {}, "Confirmed " + repaid + " of " + amount + (pending > 0n ? " (" + pending + " awaiting lender)" : "")),
+      h("span", {}, pct + "%")),
     h("div", { class: "track" }, h("div", { class: "fill ok", style: "width:" + Math.min(pct, 100) + "%" }))
   );
+
+  // Ownership challenge box
+  let verify = null;
+  if (l.status === "REQUESTED") {
+    verify = h("div", { class: "verify" },
+      h("strong", {}, "Step 1: prove this profile is yours"),
+      h("div", {}, "Put this exact text on the profile page, then run the review."),
+      h("code", {}, l.ownership_challenge),
+      h("button", { class: "btn ghost small", type: "button", onclick: async () => {
+        try { await navigator.clipboard.writeText(l.ownership_challenge); say("Verification code copied.", "ok"); }
+        catch { say("Copy failed. Select the code and copy it manually.", "err"); }
+      } }, "Copy code")
+    );
+  } else if (l.status !== "CANCELLED") {
+    verify = h("div", { class: "verify " + (bound ? "ok" : "bad") },
+      "Profile ownership ",
+      h("span", { class: "pill " + (bound ? "ok" : "bad") }, bound ? "Verified" : "Not verified"),
+      bound ? null : h("div", { class: "note" }, "The verification code was not found on the page, so the score is 0 and this loan cannot be approved. Request a new loan and publish the code first.")
+    );
+  }
 
   const urlOk = /^https:\/\//.test(l.profile_url || "");
 
@@ -564,7 +601,7 @@ function loanCard(l, anim = "", idx = 0) {
   const card = h("article", { class: cls, style: "--i:" + Math.min(idx, 6), "data-status": l.status },
     h("div", { class: "loan-top" },
       h("div", {},
-        h("h3", {}, "Loan #" + l.loan_id + (isMine ? " (yours)" : "")),
+        h("h3", {}, "Loan #" + l.loan_id + (isMine ? " (yours)" : isLender ? " (you are lender)" : "")),
         h("div", { class: "amount" }, String(amount), " ", h("small", {}, "units over " + l.term_days + " days"))
       ),
       h("span", { class: "stamp" }, l.status.charAt(0) + l.status.slice(1).toLowerCase())
@@ -575,9 +612,11 @@ function loanCard(l, anim = "", idx = 0) {
       h("div", {}, "Lender ", h("b", {}, l.lender ? short(l.lender) : "None yet")),
       h("div", {}, "Evidence ", urlOk ? h("a", { href: l.profile_url, target: "_blank", rel: "noopener noreferrer" }, l.profile_url) : h("b", {}, l.profile_url))
     ),
+    verify,
     l.status === "REQUESTED" ? null : meter,
     ["ACTIVE", "REPAID", "DEFAULTED"].includes(l.status) ? repay : null,
     l.ai_review ? h("details", {}, h("summary", {}, "Validator review"), h("pre", {}, l.ai_review)) : null,
+    l.status === "ACTIVE" ? h("p", { class: "note" }, "The borrower reports a repayment; only the lender can confirm it. Only confirmed repayments count toward reputation.") : null,
     actions.children.length ? actions : null
   );
   if (anim === "changed" && l.status === "REPAID" && !reduce.matches) card.append(burst());
@@ -623,7 +662,7 @@ async function lookupReputation(addr) {
   out.textContent = "Looking up…";
   try {
     const r = await read("get_borrower_reputation", [addr]);
-    out.textContent = r.completed_loans + " loans repaid, " + r.defaulted_loans + " defaulted. On-chain history only.";
+    out.textContent = r.completed_loans + " loans repaid (from " + r.distinct_lenders + " distinct lenders), " + r.defaulted_loans + " defaulted. Lender-confirmed history only.";
   } catch (e) {
     out.textContent = friendly(e);
   }
@@ -679,7 +718,7 @@ $("submitLoan").onclick = (e) => {
   run(e.currentTarget, async () => {
     await write("request_loan", [BigInt(amount), BigInt(term), purpose, url]);
     $("fAmount").value = ""; $("fTerm").value = ""; $("fPurpose").value = ""; $("fUrl").value = "";
-  }, "Loan requested. Next, run the borrower review on it in the ledger.");
+  }, "Loan requested. Copy its verification code onto your profile page, then run the review.");
 };
 
 $("setMin").onclick = (e) => {
