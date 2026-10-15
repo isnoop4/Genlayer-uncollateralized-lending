@@ -104,7 +104,8 @@ python3 -m http.server 8000
 Edit this line near the bottom of `index.html`:
 
 ```js
-const CONTRACT = "0xdCeb4d9111807Ba42ff3467b90898d3c05e4Db44";
+const CONTRACT = "git push
+0xB0CE8d3185AC9e4906e9cb26335E792556F1d30D";
 ```
 
 ## Deploy the contract yourself
