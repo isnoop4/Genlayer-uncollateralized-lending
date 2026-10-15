@@ -4,7 +4,7 @@ A reputation-based lending prototype built as a [GenLayer](https://www.genlayer.
 
 > **Prototype only.** The contract records loan state and history. It does **not** escrow or transfer native tokens or stablecoins. Integrate a supported escrow/token mechanism before using real funds.
 
-- **Contract (Studionet):** [`0xdCeb4d9111807Ba42ff3467b90898d3c05e4Db44`](https://explorer-studio.genlayer.com/address/0xdCeb4d9111807Ba42ff3467b90898d3c05e4Db44)
+- **Contract (Studionet):** [`0xB0CE8d3185AC9e4906e9cb26335E792556F1d30D`](https://explorer-studio.genlayer.com/address/0xB0CE8d3185AC9e4906e9cb26335E792556F1d30D)
 - **Live demo:** `https://isnoop4.github.io/Genlayer-uncollateralized-lending/`
 - **Contract source:** [`contracts/undercollateralized_lending.py`](contracts/undercollateralized_lending.py)
 
